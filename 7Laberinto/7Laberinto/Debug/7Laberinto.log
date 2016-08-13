@@ -1,0 +1,3 @@
+﻿  7Laberinto.cpp
+e:\users\khalim\documents\visual studio 2015\projects\7laberinto\7laberinto\7laberinto.cpp(358): warning C4715: 'GetNextNeighbor': not all control paths return a value
+  7Laberinto.vcxproj -> e:\Users\Khalim\Documents\Visual Studio 2015\Projects\7Laberinto\Debug\7Laberinto.exe
