@@ -5,10 +5,14 @@ var canvas, ctx, c_width = 800, c_height = 1024,
     backgroundSpeed = 250,
     chanceToSpawnMeteor = 0.9,
     chanceToSpawnEnemy = 0.5,
-    spawnInterval = 0.5,
-    timer = 0.0,
+    spawnMeteorInterval = 0.5,
+    spawnMeteortimer = 0.0,
+    spawnEnemyInterval = 0.5,
+    spawnEnemytimer = 0.0,
     states = {Splash:0, Playing: 1, GameOver:2},
     currentState = states.Splash,
+    isImpact = false,
+    dt = 0.0,
 
 plane = {
     // 0 = still, 1 left, 2 ignition, 3 right
@@ -33,7 +37,8 @@ plane = {
     shoot: function(){
         if (this.currentTimer >= this.aspd)
         {
-            bullets.addBullet(cannon1_x,cannon2_x, cannons_y);
+            bullets.addBullet(this.cannon1_x, this.cannons_y, false, -1);
+            bullets.addBullet(this.cannon2_x, this.cannons_y, false, -1);
             this.currentTimer = 0.0;
         }
     },
@@ -97,28 +102,29 @@ bullets = {
     y:0.0,
     speed: 450,
     damage:1,
+    direction: 1,
+    isEnemyBullet: false,
 
-    addBullet: function(cannon1_x, cannon2_x, cannons_y)
+    addBullet: function(_x,_y,isEnemy,_direction)
     {
-        this._bullets.push({
-            x: cannon1_x,
-            y: cannons_y,
-            damage: this.damage,
-        })
+
 
         this._bullets.push({
-            x: cannon2_x,
-            y: cannons_y,
+            x: _x,
+            y: _y,
             damage: this.damage,
+            direction: _direction,
+            isEnemyBullet: isEnemy,
         })
     },
+
+
 
     update: function(dt)
     {
         for (var i = this._bullets.length - 1; i >= 0; i--) {
-            
             var _b = this._bullets[i], center_x = _b.x + 4, center_y = _b.y + 4;
-            _b.y -= this.speed*dt;
+            _b.y += _b.direction*this.speed*dt;
             for (var j = meteors._meteors.length - 1; j >= 0; j--) {
                 
                 var _m = meteors._meteors[j], d;
@@ -129,6 +135,39 @@ bullets = {
                 {
                     this._bullets.splice(i,1);
                     _m.health -= _b.damage;
+                    if ((_m.health < 50) && (_m.type<2))
+                    {
+                        _m.type += 2;
+                        _m.radius = smallMeteorRadius;
+                    }
+                }
+                else
+                {
+                    if (_b.isEnemyBullet)
+                    {
+                        d = Math.sqrt(Math.pow(center_x - plane.center_x,2)+Math.pow(center_y - plane.center_y,2));
+
+                        if (d<= plane.radius)
+                        {
+                            this._bullets.splice(i,1);
+                            healthBar.currentHealth -=_b.damage/10;
+                        }
+                    }
+                    else
+                    {
+                        for (var i = 0; i < enemies._enemies.length; i++) {
+                            var _e = enemies._enemies[i];
+
+                            d = Math.sqrt(Math.pow(center_x - _e.center_x,2)+Math.pow(center_y - _e.center_y,2));
+
+                            if (d<= _e.radius)
+                            {
+                                this._bullets.splice(i,1);
+                                _e.health -=_b.damage;
+                                bExists = false;
+                            }
+                        }
+                    }
                 }
             }
             if (_b.y < 0)
@@ -143,11 +182,94 @@ bullets = {
         ctx.save();
         for (var i=0; i<this._bullets.length; i++)
         {
-            var _b = this._bullets[i];
-            s_bullet[0].draw(ctx,_b.x,_b.y);
+            var _b = this._bullets[i], bulletType;
+            if (_b.isEnemyBullet)
+            {
+                bulletType = 2;
+            }
+            else
+            {
+                bulletType = 0;
+            }
+            s_bullet[bulletType].draw(ctx,_b.x,_b.y);
         }
         ctx.restore();
     }
+}
+
+
+enemies = {
+    _enemies: [],
+    x:0.0,
+    y:0.0,
+    center_x:0.0,
+    center_y:0.0,
+    aspd: 0.5,
+    currentTimer: 0.0,
+    velocity_x: 1,
+    velocity_y: 1,
+    health: 50,
+    radius: 83/2,
+
+    addEnemy: function(_x,_y) {
+        var randomFloat = Math.random(), xDirection;
+
+        if (randomFloat>0.5)
+        {
+            xDirection = 1;
+        }
+        else
+        {
+            xDirection = -1;
+        }
+
+        this._enemies.push({
+            x:_x,
+            y:_y,
+            center_x:0.0,
+            center_y:0.0,
+            aspd:this.aspd,
+            currentTimer:0.0,
+            velocity_x: this.velocity_x*xDirection,
+            velocity_y: this.velocity_y,
+            health: this.health,
+            radius:this.radius,
+        })
+    },
+
+    update: function(dt) {
+        for (var i = this._enemies.length - 1; i >= 0; i--) {
+            var _e = this._enemies[i];
+            _e.center_x = _e.x + 102/2;
+            _e.center_y = _e.y + 83/2;
+            _e.currentTimer += dt;
+            if (_e.currentTimer>_e.aspd){
+                _e.currentTimer = 0;
+                bullets.addBullet(_e.center_x,_e.center_y,true,+1);
+            }
+            _e.y += _e.velocity_y;
+            _e.x += _e.velocity_x;
+            if ((_e.x <=0) || (_e.x + 102)>=c_width)
+            {
+                _e.velocity_x = -_e.velocity_x;
+            }
+
+            if (_e.y - 83/2>=c_height)
+            {
+                this._enemies.splice(i,1);
+            }
+        }
+    },
+
+    draw: function() {
+        ctx.save();
+        for (var i = this._enemies.length - 1; i >= 0; i--) {
+            var _e = this._enemies[i];            
+            s_enemy[0].draw(ctx,_e.x,_e.y);
+        }
+        ctx.restore();
+    }
+
 }
 
 meteors = {
@@ -206,6 +328,7 @@ meteors = {
         ctx.save();
         for (var i = this._meteors.length - 1; i >= 0; i--) {
             var _m = this._meteors[i];
+
                 s_meteor[_m.type].draw(ctx,_m.x,_m.y);
             }
         ctx.restore();
@@ -315,7 +438,7 @@ function keyinputCheck(dt)
     }
     if (key[83] || key[40])
     {  
-        plane.currentFrame = 0;
+        plane.currentFrame = 4;
         plane.velocity_y += plane.speed*dt;
         atLeastOne = true;
     }
@@ -329,6 +452,15 @@ function keyinputCheck(dt)
     }
 }
 
+
+
+function drawWarning(){
+    ctx.save();
+    ctx.translate(600,40);
+    ctx.drawImage(i_warning,-64,-64);
+    ctx.restore();
+}
+
 function proximitySensor(dt){
     for (var i = meteors._meteors.length - 1; i >= 0; i--) {
         var _m = meteors._meteors[i];
@@ -336,35 +468,37 @@ function proximitySensor(dt){
         //                  t = (_m.x-plane.center_x)/plane.velocity_x
         //calculate t for x_plane = x_meteor
         //t for the plane to be on meteor's X
+        var meteorYafterT = 0.0, planeYafterT = 0.0;
         if (plane.velocity_x!=0)
         {
             t = (_m.x-plane.center_x)/plane.velocity_x;
-            var meteorYafterT, planeYafterT;
             //plane.y = plane.center_y + plane.velocity_y*t
             //_m.y = _m.center_y+backgroundspeed*dt*t;
             planeYafterT = plane.center_y + plane.velocity_y*t;
-            meteorYafterT = _m.center_y+ backgroundSpeed*dt*t;
-
-               // console.log(planeYafterT - meteorYafterT);
-            if (Math.abs(planeYafterT - meteorYafterT) < (_m.radius+plane.radius))
-            {
-                console.log('impact');
-            }            
+            meteorYafterT = _m.center_y+ backgroundSpeed*dt*t; 
+            if ((Math.abs(planeYafterT - meteorYafterT) < (_m.radius+plane.radius))
+                && (planeYafterT >= 0) && (planeYafterT <= c_height-64))    
+                {
+                   drawWarning();   
+                   console.log('impact');               
+                } 
         }
         else
         {
-            if (Math.abs(plane.center_x - _m.center_x) < (_m.radius+plane.radius))
+            if ((Math.abs(plane.center_x - _m.center_x) < (_m.radius+plane.radius))
+            && (planeYafterT >= 0) && (planeYafterT <= c_height-64))
             {
-                console.log('impact');
-            }
-        }
+                drawWarning();
+                   console.log('impact');   
+            } 
+        }         
     }
 }
 
 function createEnviroment(dt){
-    if (timer >= spawnInterval)
-    {
-        timer = 0.0;
+    if (spawnMeteortimer >= spawnMeteorInterval)
+    {        
+        spawnMeteortimer = 0.0;
         var randomX = 0.0, randomFloat = 0.0;
 
         randomFloat = Math.random();
@@ -388,6 +522,19 @@ function createEnviroment(dt){
             var x = (c_width.clamp(radius,c_width-radius)*randomFloat);
             meteors.addMeteor(x, 0,randomType);
         }
+    }    
+    if (spawnEnemytimer >= spawnEnemyInterval)
+    {        
+        spawnEnemytimer = 0.0;
+        var randomX = 0.0, randomFloat = 0.0;
+
+        randomFloat = Math.random();
+        if (randomFloat<=chanceToSpawnEnemy)
+        {
+            randomFloat = Math.random();
+            var x = (c_width.clamp(83,c_width-83)*randomFloat);
+            enemies.addEnemy(x, 0);
+        }
     }
 
 }
@@ -396,7 +543,8 @@ function createEnviroment(dt){
 function update(dt){
     if (currentState == states.Playing)
     {
-        timer += dt,
+        spawnMeteortimer += dt;
+        spawnEnemytimer += dt;
         keyinputCheck(dt);
         plane.update(dt);
         bullets.update(dt);
@@ -404,27 +552,29 @@ function update(dt){
         meteors.update(dt);
         healthBar.update(dt);
         vectorArrow.update();
-        proximitySensor(dt);
+        enemies.update(dt);
     }
 }
 
-function render(){
+function render(dt){
     ctx.clearRect(0,0,c_width,c_height);
     plane.draw();
     bullets.draw();
     meteors.draw();
     healthBar.draw();
     vectorArrow.draw();
+    proximitySensor(dt);
+    enemies.draw();
 }
 
 function tick(){
     var lastTime = currentTime;
     currentTime = Date.now();
     ///dt as milisecs
-    var dt = (currentTime-lastTime)/1000;
+    dt = (currentTime-lastTime)/1000;
 
     update(dt);
-    render();
+    render(dt);
 }
 
 function onpress(){
@@ -442,7 +592,7 @@ function main(){
     document.addEventListener(evt,onpress);
 
 
-    setInterval(tick,0);
+    setInterval(tick,dt);
 
 }
 

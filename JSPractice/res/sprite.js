@@ -8,6 +8,7 @@ var
     s_enemy,
     s_meteor,
     i_vector,
+    i_warning,
 
 
     plane_img,
@@ -16,6 +17,9 @@ var
 
     i_vector = new Image();
     i_vector.src = "res/vectorArrow.png";
+
+    i_warning = new Image();
+    i_warning.src = "res/impact.png";
 
     bigMeteorRadius = 97/2,
     smallMeteorRadius = 39/2;
@@ -32,7 +36,8 @@ var
         new Sprite(plane_img,0,0,64,63),
         new Sprite(plane_img,64,0,64,63),
         new Sprite(plane_img,0,64,64,63),
-        new Sprite(plane_img,64,64,64,63)
+        new Sprite(plane_img,64,64,64,63),
+        new Sprite(plane_img,0,128,64,63)
     ];
 
     //0 red, 1 yellow, 2 purple
