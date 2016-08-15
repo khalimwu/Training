@@ -151,22 +151,22 @@ bullets = {
                         {
                             this._bullets.splice(i,1);
                             healthBar.currentHealth -=_b.damage/10;
+                            healthBar.currentHealth = healthBar.currentHealth.clamp(0,1);
                         }
                     }
                     else
                     {
-                        for (var i = 0; i < enemies._enemies.length; i++) {
-                            var _e = enemies._enemies[i];
+                        // for (var i = 0; i < enemies._enemies.length; i++) {
+                        //     var _e = enemies._enemies[i];
 
-                            d = Math.sqrt(Math.pow(center_x - _e.center_x,2)+Math.pow(center_y - _e.center_y,2));
+                        //     d = Math.sqrt(Math.pow(center_x - _e.x,2)+Math.pow(center_y - _e.y,2));
 
-                            if (d<= _e.radius)
-                            {
-                                this._bullets.splice(i,1);
-                                _e.health -=_b.damage;
-                                bExists = false;
-                            }
-                        }
+                        //     if (d<= _e.radius)
+                        //     {
+                        //         this._bullets.splice(i,1);
+                        //         _e.health -=_b.damage;
+                        //     }
+                        // }
                     }
                 }
             }
@@ -557,14 +557,17 @@ function update(dt){
 }
 
 function render(dt){
-    ctx.clearRect(0,0,c_width,c_height);
-    plane.draw();
-    bullets.draw();
-    meteors.draw();
-    healthBar.draw();
-    vectorArrow.draw();
-    proximitySensor(dt);
-    enemies.draw();
+    if (currentState == states.Playing)
+    {        
+        ctx.clearRect(0,0,c_width,c_height);
+        plane.draw();
+        bullets.draw();
+        meteors.draw();
+        healthBar.draw();
+        vectorArrow.draw();
+        proximitySensor(dt);
+        enemies.draw();
+    }
 }
 
 function tick(){
